@@ -44,10 +44,10 @@ def log_step(step: int, action: Dict[str, Any], reward: float, done: bool, error
     )
 
 
-def log_end(success: bool, steps: int, score: float, rewards: List[float], task: str) -> None:
+def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
     rewards_fmt = "[" + ",".join(f"{r:.2f}" for r in rewards) + "]"
     print(
-        f"[END] task={task} success={_b(success)} steps={steps} score={score:.3f} rewards={rewards_fmt}",
+        f"[END] success={_b(success)} steps={steps} score={score:.3f} rewards={rewards_fmt}",
         flush=True,
     )
 
@@ -192,7 +192,7 @@ def run_task(client: OpenAI, env: SupportTriageEnv, task: str) -> Dict[str, Any]
     rewards: List[float] = []
     history: List[str] = []
     steps_taken = 0
-    score = 0.0
+    score = 0.001
     success = False
 
     log_start(task=task, env=BENCHMARK, model=MODEL_NAME)
@@ -231,7 +231,9 @@ def run_task(client: OpenAI, env: SupportTriageEnv, task: str) -> Dict[str, Any]
     except Exception:
         success = False
     finally:
-        log_end(success=success, steps=steps_taken, score=score, rewards=rewards, task=task)
+        # Keep score strictly in (0,1) even on exception fallback paths.
+        score = min(max(score, 0.001), 0.999)
+        log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
 
     return {"task": task, "score": score, "success": success}
 

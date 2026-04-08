@@ -73,7 +73,7 @@ All tasks are deterministic fixtures bundled in-repo.
 
 ## Graders and Reward
 
-Each task has a deterministic rubric-based grader returning score in `[0.0, 1.0]`.
+Each task has a deterministic rubric-based grader returning score in `(0.0, 1.0)` (strictly inside the range for Phase 2 validator compatibility).
 
 Component scoring includes:
 
@@ -251,10 +251,10 @@ python -m pip install openenv-core
 
 Reference baseline from a validated local run:
 
-- easy: `1.00`
-- medium: `0.92`
-- hard: `1.00`
-- overall mean: `0.97`
+- easy: `0.999`
+- medium: `0.925`
+- hard: `0.999`
+- overall mean: `0.974`
 
 With deterministic fixtures and low-temperature inference, scores are stable across runs. If remote model behavior changes, the fallback heuristic keeps runs reproducible and bounded.
 
