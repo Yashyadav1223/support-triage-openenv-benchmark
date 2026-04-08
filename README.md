@@ -158,6 +158,7 @@ Required/optional env vars:
 - `API_BASE_URL` (optional, has default)
 - `MODEL_NAME` (optional, has default)
 - `HF_TOKEN` (required)
+- `LOCAL_IMAGE_NAME` (optional; only needed for docker-image loading variants)
 
 Run in a second PowerShell terminal (after setting env vars):
 
@@ -248,12 +249,12 @@ python -m pip install openenv-core
 
 ## Expected Baseline Behavior
 
-Reference baseline (deterministic heuristic fallback path):
+Reference baseline from a validated local run:
 
 - easy: `1.00`
-- medium: `1.00`
-- hard: `0.95` to `1.00` (depends on model output vs fallback branch)
-- overall mean: typically `0.98+`
+- medium: `0.92`
+- hard: `1.00`
+- overall mean: `0.97`
 
 With deterministic fixtures and low-temperature inference, scores are stable across runs. If remote model behavior changes, the fallback heuristic keeps runs reproducible and bounded.
 
