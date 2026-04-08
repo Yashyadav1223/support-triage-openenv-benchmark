@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "support-triage-openenv"
+version = "1.0.0"
+description = "Deterministic customer support triage OpenEnv benchmark"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+  { name = "Meta OpenEnv Hackathon Submission" }
+]
+dependencies = [
+  "fastapi==0.115.6",
+  "uvicorn==0.35.0",
+  "pydantic==2.11.7",
+  "openai==2.7.2",
+  "openenv-core==0.2.3"
+]
+
+[tool.setuptools]
+packages = ["support_triage_env"]
+
+[project.scripts]
+server = "server.app:main"

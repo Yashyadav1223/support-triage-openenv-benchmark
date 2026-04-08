@@ -1,0 +1,22 @@
+name: support-triage-openenv
+version: 1.0.0
+description: Deterministic customer support triage benchmark with three graded tasks.
+entrypoint: support_triage_env.env:SupportTriageEnv
+tags:
+  - openenv
+  - customer-support
+  - triage
+models:
+  action: support_triage_env.models:SupportAction
+  observation: support_triage_env.models:SupportObservation
+  reward: support_triage_env.models:SupportReward
+tasks:
+  - id: easy
+    difficulty: easy
+    description: Single-ticket billing triage with response and resolution.
+  - id: medium
+    difficulty: medium
+    description: Two-ticket mixed technical and billing triage with escalation.
+  - id: hard
+    difficulty: hard
+    description: Three-ticket SLA-aware prioritization with security escalation dependencies.
