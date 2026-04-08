@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException
 from pydantic import BaseModel
 
 from support_triage_env import SupportAction, SupportTriageEnv
@@ -22,9 +22,10 @@ def root() -> dict:
 
 
 @app.post("/reset")
-def reset(payload: ResetRequest) -> dict:
+def reset(payload: Optional[ResetRequest] = Body(default=None)) -> dict:
     try:
-        result = ENV.reset(task_id=payload.task_id)
+        task_id = payload.task_id if payload is not None else None
+        result = ENV.reset(task_id=task_id)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return result.model_dump()
