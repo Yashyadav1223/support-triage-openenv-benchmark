@@ -102,6 +102,8 @@ def evaluate_state(task: TaskFixture, state: SupportState) -> Tuple[float, Dict[
     for key, weight in weights.items():
         score += components.get(key, 0.0) * weight
 
-    score = max(0.0, min(1.0, score))
+    # Phase 2 validator requires task scores strictly within (0, 1), not inclusive.
+    epsilon = 1e-3
+    score = max(epsilon, min(1.0 - epsilon, score))
     success = score >= 0.90
     return score, components, success
