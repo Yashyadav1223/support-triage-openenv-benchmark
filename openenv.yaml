@@ -1,22 +1,32 @@
+spec_version: 1
 name: support-triage-openenv
-version: 1.0.0
-description: Deterministic customer support triage benchmark with three graded tasks.
-entrypoint: support_triage_env.env:SupportTriageEnv
+title: Support Triage OpenEnv
+type: space
+runtime: fastapi
+app: server.app:app
+port: 7860
+version: 2.0.0
+description: >
+  Deterministic B2B SaaS support-operations benchmark for triage, escalation,
+  policy-safe replies, and SLA-aware prioritization.
+entrypoint: support_triage_env.env:SupportTriageEnvironment
 tags:
   - openenv
   - customer-support
   - triage
+  - operations
 models:
   action: support_triage_env.models:SupportAction
   observation: support_triage_env.models:SupportObservation
   reward: support_triage_env.models:SupportReward
+  state: support_triage_env.models:SupportState
 tasks:
   - id: easy
     difficulty: easy
-    description: Single-ticket billing triage with response and resolution.
+    description: Duplicate-charge triage with policy-safe billing response.
   - id: medium
     difficulty: medium
-    description: Two-ticket mixed technical and billing triage with escalation.
+    description: Enterprise SSO incident plus VAT invoice correction under mixed urgency.
   - id: hard
     difficulty: hard
-    description: Three-ticket SLA-aware prioritization with security escalation dependencies.
+    description: Multi-ticket queue with security, engineering, and billing prioritization pressure.

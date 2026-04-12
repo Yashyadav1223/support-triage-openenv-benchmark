@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import os
+
 import uvicorn
 
 from app import app
 
 
-def main() -> None:
-    uvicorn.run("server.app:app", host="0.0.0.0", port=7860)
+def main(host: str = "0.0.0.0", port: int | None = None) -> None:
+    resolved_port = port if port is not None else int(os.getenv("PORT", "7860"))
+    uvicorn.run(app, host=host, port=resolved_port)
 
 
 if __name__ == "__main__":

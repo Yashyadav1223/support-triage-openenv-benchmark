@@ -6,265 +6,260 @@ tags:
   - openenv
   - benchmark
   - customer-support
+  - operations
 ---
 
 # Support Triage OpenEnv
 
-A real-world OpenEnv environment that simulates customer support ticket triage and first-response operations. It is deterministic, includes dense reward shaping, and provides three graded tasks from easy to hard.
+Support Triage OpenEnv is a deterministic B2B SaaS support-operations environment built for the Meta PyTorch OpenEnv Hackathon. It models the kind of work real support engineers and technical account teams actually do: triage mixed-severity tickets, prioritize by SLA pressure, route issues correctly, draft policy-safe replies, escalate the right incidents, and close tickets only after the workflow is genuinely complete.
 
-## Why this environment
+This environment is intentionally not a toy helpdesk simulator. The hard task forces the agent to choose between a security incident, an engineering-impacting integration bug, and a lower-priority policy question, while preserving safe operational order.
 
-Teams routinely classify, route, escalate, and resolve incoming tickets under SLA pressure. This environment captures that workflow and is useful for training/evaluating agentic decision quality beyond toy tasks.
+## What the environment simulates
 
-## OpenEnv Interface
+Each episode represents an incoming support queue for a SaaS company. The agent sees structured ticket data and a short policy digest, then must act through typed OpenEnv actions:
 
-The environment implements:
+- classify a ticket with priority and queue
+- extract the canonical issue type
+- draft a customer-facing reply
+- escalate to the correct internal team when required
+- resolve the ticket with the right resolution code
 
-- `reset(task_id: Optional[str]) -> StepResult`
-- `step(action: SupportAction) -> StepResult`
-- `state() -> Dict[str, Any]`
+The environment scores not just final correctness, but workflow quality:
 
-Typed models are implemented with Pydantic:
+- did the agent touch the highest-risk ticket first?
+- did it route the issue to the correct team?
+- did it avoid unsafe or overpromising language?
+- did it escalate before resolving incidents that require specialist ownership?
+- did it preserve a sensible resolution order across the queue?
 
-- `SupportAction`
-- `SupportObservation`
-- `SupportReward`
-- `SupportState`
-- `StepResult`
+## Why this is useful
 
-Metadata is defined in `openenv.yaml`.
+Customer support and technical triage are real agentic workflows with clear business value:
 
-## Action Space
+- prioritization mistakes create SLA breaches
+- poor routing delays customer recovery
+- unsafe language creates policy or trust risk
+- premature resolution hides unresolved incidents
+- multi-ticket queues require reasoning over urgency, dependencies, and business impact
+
+That makes the benchmark useful both for RL-style training and for evaluating whether frontier agents can handle realistic internal operations tasks.
+
+## Task suite
+
+Three deterministic tasks are bundled in-repo:
+
+- `easy`: duplicate-charge triage for a pro customer who needs a same-day billing answer
+- `medium`: enterprise SSO access failure plus a VAT invoice correction request under mixed urgency
+- `hard`: potential account takeover, duplicate-shipment webhook incident, and refund ETA question in one queue
+
+Each task includes:
+
+- a concrete business scenario
+- typed ticket fixtures
+- a deterministic grader
+- dense reward shaping with partial progress
+- a reproducible target workflow from easy to hard
+
+## Typed action space
+
+Defined in [support_triage_env/models.py](/C:/Users/yashy/Desktop/Meta/support_triage_env/models.py).
 
 `SupportAction` fields:
 
-- `operation`: one of `classify | extract | respond | escalate | resolve | noop`
-- `ticket_id`: optional for `noop`, required otherwise
-- `payload`: dictionary with operation-specific fields
+- `operation`: `classify | extract | respond | escalate | resolve | noop`
+- `ticket_id`: required for every non-`noop` action
+- `priority`: `urgent | high | medium | low`
+- `queue`: `security | technical | billing`
+- `issue_type`: one of the benchmark issue labels such as `duplicate_charge` or `account_takeover`
+- `message`: customer-facing response text for `respond`
+- `escalation_target`: internal owner such as `security_incident` or `engineering_oncall`
+- `resolution_code`: close-out code such as `billing_case_opened` or `security_incident_opened`
 
-Examples:
+## Observation space
 
-- `classify`: `{"priority": "high", "queue": "billing"}`
-- `extract`: `{"issue_type": "duplicate_charge"}`
-- `respond`: `{"message": "..."}`
-- `escalate`: `{"reason": "security_incident"}`
-- `resolve`: `{"resolution_note": "billing_case_opened"}`
+Defined in [support_triage_env/models.py](/C:/Users/yashy/Desktop/Meta/support_triage_env/models.py).
 
-## Observation Space
+Each `SupportObservation` includes:
 
-`SupportObservation` fields:
-
-- `task_id`
-- `task_description`
-- `step_index`
-- `remaining_steps`
-- `visible_tickets` (ticket list)
+- `task_id` and `task_description`
+- `step_index`, `max_steps`, and `remaining_steps`
+- `policy_digest` with short operational rules for the episode
+- `visible_tickets` with SLA pressure, customer tier, impact, risk flags, links, and workflow status
 - `action_history`
-- `progress_score` in `[0.0, 1.0]`
+- `progress_score`
+- `score_breakdown`
 - `last_feedback`
 
-## Tasks and Difficulty
+This gives the agent enough context to act meaningfully while keeping the environment deterministic and lightweight.
 
-- `easy`: Single billing ticket; classify, route, respond, resolve.
-- `medium`: Two tickets (technical + billing); requires escalation accuracy.
-- `hard`: Three linked tickets with security + engineering escalation and resolution order pressure.
+## Reward design
 
-All tasks are deterministic fixtures bundled in-repo.
+The reward is dense, not binary. On every step the environment computes:
 
-## Graders and Reward
+- positive signal from score improvement
+- bonus for touching the correct highest-priority ticket at the right time
+- bonus for preserving the expected resolution order
+- penalties for invalid payloads
+- penalties for repeated actions and noop abuse
+- penalties for unsafe response language
+- penalties for resolving before the required triage or escalation work is complete
 
-Each task has a deterministic rubric-based grader returning score in `(0.0, 1.0)` (strictly inside the range for Phase 2 validator compatibility).
+The final grader returns a score clamped to `(0.0, 1.0)` for validator compatibility.
 
-Component scoring includes:
+The grader blends:
 
-- classification correctness
-- queue routing correctness
-- issue extraction correctness
-- response quality (keyword/intent checks)
-- resolution quality
-- escalation correctness (medium/hard)
-- resolution ordering (hard)
+- prioritization quality
+- priority accuracy
+- queue routing accuracy
+- issue extraction accuracy
+- response quality
+- response safety
+- escalation accuracy
+- resolution accuracy
+- workflow hygiene
+- resolution order on the hard task
 
-Step reward is dense and shaped:
+## Core files
 
-- positive signal from incremental score progress
-- penalties for invalid actions, loops/repeats, and noop abuse
-- reward clamped to `[0.0, 1.0]`
+- [openenv.yaml](/C:/Users/yashy/Desktop/Meta/openenv.yaml): environment manifest
+- [support_triage_env/models.py](/C:/Users/yashy/Desktop/Meta/support_triage_env/models.py): typed action, observation, reward, and state models
+- [support_triage_env/fixtures.py](/C:/Users/yashy/Desktop/Meta/support_triage_env/fixtures.py): deterministic task catalog
+- [support_triage_env/graders.py](/C:/Users/yashy/Desktop/Meta/support_triage_env/graders.py): deterministic rubric-based graders
+- [support_triage_env/env.py](/C:/Users/yashy/Desktop/Meta/support_triage_env/env.py): environment implementation
+- [support_triage_env/client.py](/C:/Users/yashy/Desktop/Meta/support_triage_env/client.py): OpenEnv WebSocket client
+- [app.py](/C:/Users/yashy/Desktop/Meta/app.py): FastAPI app factory
+- [server/app.py](/C:/Users/yashy/Desktop/Meta/server/app.py): server entrypoint
+- [inference.py](/C:/Users/yashy/Desktop/Meta/inference.py): root-level baseline runner
+- [validate_local.py](/C:/Users/yashy/Desktop/Meta/validate_local.py): local benchmark smoke checks
+- [prepare_submission.py](/C:/Users/yashy/Desktop/Meta/prepare_submission.py): creates a clean submission bundle
 
-## Zero-to-Submission Setup (Windows, beginner friendly)
+## Local setup
 
-### 1) Install required software
-
-Install these tools first:
-
-- Git: https://git-scm.com/download/win
-- Python 3.11: https://www.python.org/downloads/
-- Docker Desktop: https://www.docker.com/products/docker-desktop/
-
-After installation, open a NEW PowerShell window and verify:
-
-```powershell
-git --version
-python --version
-docker --version
-```
-
-### 2) Clone/open project folder
-
-```powershell
-cd C:\Users\yashy\Desktop
-git clone <your-repo-url> Meta
-cd Meta
-```
-
-### 3) Create virtual environment and install packages
+### 1) Create a virtual environment
 
 ```powershell
 python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-### 4) Configure environment variables
-
-Copy `.env.example` values into your shell session:
+### 2) Run the benchmark smoke check
 
 ```powershell
-$env:API_BASE_URL = "https://api.openai.com/v1"
-$env:MODEL_NAME = "gpt-4.1-mini"
-$env:HF_TOKEN = "<YOUR_TOKEN_HERE>"
+.venv\Scripts\python.exe validate_local.py
 ```
 
-`HF_TOKEN` is mandatory. `API_BASE_URL` and `MODEL_NAME` have defaults in `inference.py`.
-
-## Run the API (local)
+### 3) Run the official OpenEnv validator
 
 ```powershell
-uvicorn app:app --host 0.0.0.0 --port 7860
+.venv\Scripts\openenv.exe validate
 ```
 
-Endpoints:
+## Running the server locally
 
+```powershell
+.venv\Scripts\python.exe -m uvicorn server.app:app --host 0.0.0.0 --port 7860
+```
+
+Useful endpoints:
+
+- `GET /health`
+- `GET /metadata`
+- `GET /schema`
+- `POST /mcp`
 - `POST /reset`
 - `POST /step`
 - `GET /state`
+- `GET /docs`
+- `WS /ws`
 
-## Inference Script
-
-`inference.py` is at repo root and uses the OpenAI Python client.
-
-Required/optional env vars:
-
-- `API_BASE_URL` (optional, has default)
-- `MODEL_NAME` (optional, has default)
-- `HF_TOKEN` (required)
-- `LOCAL_IMAGE_NAME` (optional; only needed for docker-image loading variants)
-
-Run in a second PowerShell terminal (after setting env vars):
-
-```powershell
-.venv\Scripts\Activate.ps1
-$env:HF_TOKEN = "<YOUR_TOKEN_HERE>"
-python inference.py
-```
-
-Stdout is emitted strictly as:
-
-- `[START] ...`
-- `[STEP] ...`
-- `[END] ...`
-
-No extra stdout lines are printed.
-
-### Manual format check (important)
-
-Confirm every output line starts with exactly one of:
-
-- `[START]`
-- `[STEP]`
-- `[END]`
-
-Also confirm:
-
-- boolean values are lowercase `true/false`
-- `reward=` values show exactly 2 decimals (for example `0.25`)
-
-`[END]` is always printed for each task due `finally` block logic.
-
-## Docker
-
-```powershell
-docker build -t support-triage-openenv .
-docker run --rm -p 7860:7860 support-triage-openenv
-```
-
-Test API from host:
-
-```powershell
-Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:7860/reset" -ContentType "application/json" -Body "{}"
-```
-
-Or run the included smoke test:
+PowerShell smoke test:
 
 ```powershell
 .\scripts\smoke_test.ps1
 ```
 
-## Validation Checklist
+## Baseline inference
 
-- HF Space running and `POST /reset` returns HTTP 200
-- `docker build` succeeds
-- `openenv validate` succeeds
-- `python inference.py` runs and emits strict log format
-- all task scores and rewards are bounded `[0.0, 1.0]`
+The required root-level script is [inference.py](/C:/Users/yashy/Desktop/Meta/inference.py).
 
-### OpenEnv validation command
+Environment variables:
 
-```powershell
-openenv validate
-```
+- `API_BASE_URL`: LLM API endpoint
+- `MODEL_NAME`: model identifier
+- `HF_TOKEN`: API key used by the OpenAI client
+- `LOCAL_IMAGE_NAME`: optional local Docker image tag, defaults to `support-triage-openenv:latest`
 
-If `openenv` is not found:
+Run:
 
 ```powershell
-python -m pip install openenv-core
+$env:API_BASE_URL = "https://api.openai.com/v1"
+$env:MODEL_NAME = "gpt-4.1-mini"
+$env:HF_TOKEN = "<YOUR_TOKEN_HERE>"
+.venv\Scripts\python.exe inference.py
 ```
 
-## Hugging Face Space Deployment (Docker SDK)
+Behavior:
 
-1. Create a new Space on Hugging Face.
-2. Choose `Docker` as SDK.
-3. Set Space visibility as needed.
-4. Push this repo to the Space.
-5. Wait until status becomes `Running`.
-6. Confirm health:
-   - `POST <SPACE_URL>/reset` returns `200`.
-7. Add Space tag `openenv`.
+- emits strict `[START]`, `[STEP]`, and `[END]` logs only
+- uses the OpenAI client when `HF_TOKEN` is set
+- falls back to a deterministic staged support policy when no token is provided
+- writes a machine-readable score artifact to `outputs/baseline_scores.json`
+- can use the Docker-backed OpenEnv client when a local image is available
 
-### Recommended Space secrets
+## Docker
 
-- `HF_TOKEN`
-- `API_BASE_URL` (optional)
-- `MODEL_NAME` (optional)
+Build:
 
-## Expected Baseline Behavior
+```powershell
+docker build -t support-triage-openenv:latest .
+```
 
-Reference baseline from a validated local run:
+Run:
 
-- easy: `0.999`
-- medium: `0.925`
-- hard: `0.999`
-- overall mean: `0.974`
+```powershell
+docker run --rm -p 7860:7860 support-triage-openenv:latest
+```
 
-With deterministic fixtures and low-temperature inference, scores are stable across runs. If remote model behavior changes, the fallback heuristic keeps runs reproducible and bounded.
+Quick API checks:
 
-## Project Structure
+```powershell
+Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:7860/health"
+Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:7860/metadata"
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:7860/reset" -ContentType "application/json" -Body "{}"
+```
 
-- `support_triage_env/models.py`: typed models
-- `support_triage_env/fixtures.py`: deterministic task fixtures
-- `support_triage_env/graders.py`: deterministic rubric graders
-- `support_triage_env/env.py`: reset/step/state environment
-- `app.py`: FastAPI server endpoints
-- `openenv.yaml`: OpenEnv metadata
-- `inference.py`: root baseline runner
-- `Dockerfile`: container build/runtime
+## Hugging Face Space deployment
+
+This repo is designed for a Docker-based Space.
+
+1. Create a new Hugging Face Space.
+2. Choose `Docker` as the SDK.
+3. Push this repository.
+4. Add the `openenv` tag to the Space.
+5. Set secrets for:
+   - `HF_TOKEN`
+   - `API_BASE_URL`
+   - `MODEL_NAME`
+6. Wait for the Space to become healthy and verify `POST /reset` returns HTTP `200`.
+
+## Submission helper
+
+To prepare a clean bundle of only the submission-relevant files:
+
+```powershell
+.venv\Scripts\python.exe prepare_submission.py
+```
+
+This creates `submission_bundle/`.
+
+## Judge-facing strengths
+
+The environment is intentionally designed to score well on Round 1 judging:
+
+- real-world utility: support operations is a real production workflow
+- task quality: each task has a concrete objective and deterministic rubric
+- environment design: dense rewards, meaningful penalties, and clean episode state
+- spec compliance: typed models, Docker, inference script, and standard OpenEnv server endpoints
+- creativity: mixes policy safety, prioritization, and multi-ticket reasoning instead of simple single-ticket classification

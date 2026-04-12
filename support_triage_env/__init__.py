@@ -1,12 +1,14 @@
 """Support triage OpenEnv package."""
 
-from .env import SupportTriageEnv
-from .models import SupportAction, SupportObservation, SupportReward, StepResult
+from .client import SupportTriageEnv
+from .env import SupportTriageEnvironment
+from .models import SupportAction, SupportObservation, SupportReward, SupportState
 
 __all__ = [
-    "SupportTriageEnv",
     "SupportAction",
     "SupportObservation",
     "SupportReward",
-    "StepResult",
+    "SupportState",
+    "SupportTriageEnv",
+    "SupportTriageEnvironment",
 ]
