@@ -122,17 +122,17 @@ The grader blends:
 
 ## Core files
 
-- [openenv.yaml](/C:/Users/yashy/Desktop/Meta/openenv.yaml): environment manifest
-- [support_triage_env/models.py](/C:/Users/yashy/Desktop/Meta/support_triage_env/models.py): typed action, observation, reward, and state models
-- [support_triage_env/fixtures.py](/C:/Users/yashy/Desktop/Meta/support_triage_env/fixtures.py): deterministic task catalog
-- [support_triage_env/graders.py](/C:/Users/yashy/Desktop/Meta/support_triage_env/graders.py): deterministic rubric-based graders
-- [support_triage_env/env.py](/C:/Users/yashy/Desktop/Meta/support_triage_env/env.py): environment implementation
-- [support_triage_env/client.py](/C:/Users/yashy/Desktop/Meta/support_triage_env/client.py): OpenEnv WebSocket client
-- [app.py](/C:/Users/yashy/Desktop/Meta/app.py): FastAPI app factory
-- [server/app.py](/C:/Users/yashy/Desktop/Meta/server/app.py): server entrypoint
-- [inference.py](/C:/Users/yashy/Desktop/Meta/inference.py): root-level baseline runner
-- [validate_local.py](/C:/Users/yashy/Desktop/Meta/validate_local.py): local benchmark smoke checks
-- [prepare_submission.py](/C:/Users/yashy/Desktop/Meta/prepare_submission.py): creates a clean submission bundle
+- [openenv.yaml](./openenv.yaml): environment manifest  
+- [support_triage_env/models.py](./support_triage_env/models.py): typed action, observation, reward, and state models  
+- [support_triage_env/fixtures.py](./support_triage_env/fixtures.py): deterministic task catalog  
+- [support_triage_env/graders.py](./support_triage_env/graders.py): deterministic rubric-based graders  
+- [support_triage_env/env.py](./support_triage_env/env.py): environment implementation  
+- [support_triage_env/client.py](./support_triage_env/client.py): OpenEnv WebSocket client  
+- [app.py](./app.py): FastAPI app factory  
+- [server/app.py](./server/app.py): server entrypoint  
+- [inference.py](./inference.py): root-level baseline runner  
+- [validate_local.py](./validate_local.py): local benchmark smoke checks  
+- [prepare_submission.py](./prepare_submission.py): creates a clean submission bundle  
 
 ## Local setup
 
